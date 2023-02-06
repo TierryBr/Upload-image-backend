@@ -3,70 +3,73 @@ const path = require("path")
 const crypto = require("crypto")
 const aws = require("aws-sdk")
 const multerS3 = require("multer-s3")
+const { S3Client } = require('@aws-sdk/client-s3');
+
+let S3 = new S3Client({
+  region: process.env.AWS_DEFAULT_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+  sslEnabled: false,
+  s3ForcePathStyle: true,
+  signatureVersion: 'v4',
+});
 
 
 const storageType = {
-    // Salvando os arquivos local
-    local: multer.diskStorage({
+  local: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, path.resolve(__dirname, '..', '..', 'temp', 'uploads'))
+    },
+    filename: (req, file, cb) => {
+      crypto.randomBytes(8, (err, hash) => {
+        if (err) cb(err)
 
-        destination: (req, file, cb) => {
-            cb(null, path.resolve(__dirname, '..', '..', 'temp', 'uploads'))
-        },
+        file.key = `${hash.toString('hex')}-${file.originalname}`
 
-        filename: (req, file, cb) => {
-            crypto.randomBytes(16, (err, hash) => {
-                if (err) cb(err)
+        cb(null, file.key)
+      })
+    },
 
-                // definindo o nome do arquivo
-                file.key = `${hash.toString('hex')}-${file.originalname}`
+  }),
 
-                cb(null, file.key)
-            })
-        },
+  s3: multerS3({
+    s3: S3,
+    bucket: process.env.AWS_BUCKET,
+    contentType: multerS3.AUTO_CONTENT_TYPE,
+    acl: 'public-read',
+    key: (req, file, cb) => {
+      crypto.randomBytes(8, (err, hash) => {
+        if (err) cb(err)
 
-    }),
+        file.key = `${hash.toString("hex")}-${file.originalname}`
 
-    // Salvando no aws
-    S3: multerS3({
-        s3: new aws.S3(),
-        bucket: 'uploadphotosexample/photos',
-        contentType: multerS3.AUTO_CONTENT_TYPE,
-        acl: 'public-read',
-        key: (req, file, cb) => {
-            crypto.randomBytes(16, (err, hash) => {
-                if (err) cb(err)
-
-                // definindo o nome do arquivo
-                const fileName = `${hash.toString("hex")}-${file.originalname}`
-
-                cb(null, fileName)
-            })
-        }
-    })
+        cb(null, file.key)
+      })
+    }
+  })
 }
 
 module.exports = {
-    dest: path.resolve(__dirname, '..', '..', 'temp', 'uploads'),
-    // Usa no [ ] local para salvar no disco e S3 para salvar no aws
-    storage: storageType[process.env.STORAGE_TYPE],
-    limits: {
-        fileSize: 5 * 1024 * 1024
-    },
-
-    fileFilter: (req, file, cb) => {
-        const allowedMimes = [
-            'image/jpeg',
-            'image/pjpeg',
-            'image/png',
-            'image/dng',
-            'image/gif'
-        ]
-
-        if (allowedMimes.includes(file.mimetype)) {
-            cb(null, true)
-        } else {
-            cb(new Error("Invalid file type."))
-        }
+  dest: path.resolve(__dirname, '..', '..', 'temp', 'uploads'),
+  storage: storageType[process.env.STORAGE_TYPE],
+  limits: {
+    fileSize: 15 * 1024 * 1024
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      'image/jpeg',
+      'image/pjpeg',
+      'image/png',
+      'image/dng',
+      'image/gif'
+    ]
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true)
+    } else {
+      cb(new Error("Invalid file type."))
     }
+  }
 
 }
