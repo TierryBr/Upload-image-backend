@@ -4,6 +4,10 @@ const multerConfig = require('./config/multer')
 
 const Post = require('./models/Post')
 
+routes.get('/', async (request, response) => {
+  return response.json({ message: 'Upload' })
+})
+
 routes.get('/posts', async (request, response) => {
   const posts = await Post.find()
 
