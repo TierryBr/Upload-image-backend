@@ -22,8 +22,7 @@ routes.post('/posts', multer(multerConfig).single('file'), async (request, respo
     name,
     size,
     key,
-    url,
-    favorite: false,
+    url
   })
 
   return response.json(post)
