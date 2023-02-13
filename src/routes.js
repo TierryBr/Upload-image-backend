@@ -16,14 +16,14 @@ routes.get('/posts', async (request, response) => {
 
 
 routes.post('/posts', multer(multerConfig).single('file'), async (request, response) => {
-  const { originalname: name, size, key, location: url = "", favorite = false } = request.file
+  const { originalname: name, size, key, location: url = "" } = request.file
 
   const post = await Post.create({
     name,
     size,
     key,
     url,
-    favorite
+    favorite: false,
   })
 
   return response.json(post)
